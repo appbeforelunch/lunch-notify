@@ -12,3 +12,7 @@ Observations (pre-fix, untouched):
 1. The "summary" is the final message's first 12 words, truncated mid-sentence, not a synthesis.
 2. Markdown survives into the SPOKEN line: backticks and em dashes get read to you out loud.
 3. Project attribution from cwd works; redaction fixtures pass.
+
+Post-fix verification 2026-09-29 (before second fix):
+lunch-notify/session-1.jsonl -> "The kit is built and fully tested, all 25 fixture checks pass"  (GOOD: complete thought)
+lunch-unitprice/session-2.jsonl -> "| Stone Oven, 1 lb 11.5 oz, $7.99 | 27.5 oz |…"  (REGRESSION: was "Fixed. 61/61 passing..." pre-fix; now a markdown table row, pipes spoken, still truncated)

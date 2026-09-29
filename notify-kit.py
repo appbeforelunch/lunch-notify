@@ -70,27 +70,105 @@ def load_config():
     return cfg
 
 
+OUTCOME_RE = re.compile(
+    r"(?i)\b(pass(?:ed|ing|es)?|fail(?:ed|ing|s)?|fix(?:ed|es)?|done|"
+    r"complete[ds]?|finish(?:ed)?|built|creat(?:ed|es)|add(?:ed|s)|"
+    r"updat(?:ed|es)|remov(?:ed|es)|delet(?:ed|es)|chang(?:ed|es)|"
+    r"renam(?:ed|es)|refactor(?:ed)?|migrat(?:ed|es)|deploy(?:ed|s)?|"
+    r"merg(?:ed|es)|install(?:ed|s)?|green|working|ready|resolved|"
+    r"verified|tested|error(?:s)?|blocked|waiting|needs?)\b"
+)
+NUMBER_RE = re.compile(r"\b\d[\d,./]*\b")
+FUTURE_RE = re.compile(r"(?i)^(i'?ll\b|let me\b|next\b|now i\b|to do\b|if you\b|you can\b|want me\b)")
+
+
 def redact(text):
     for pat in SECRET_PATTERNS:
         text = pat.sub("[redacted]", text)
     return text
 
 
+def clean_text(text):
+    """Strip markdown so nothing decorative reaches a banner or gets spoken."""
+    text = re.sub(r"```.*?```", " ", text, flags=re.S)   # fenced code blocks
+    text = re.sub(r"^#+\s*", "", text, flags=re.M)       # headers
+    text = text.replace("`", "")                          # inline code markers
+    text = re.sub(r"\*\*?", "", text)                     # bold/italic markers
+    text = re.sub(r"^\s*[-*•]\s+", "", text, flags=re.M)  # bullet markers
+    text = re.sub(r"^\s*>\s?", "", text, flags=re.M)      # blockquotes
+    return text
+
+
+def _score(sentence, idx, total):
+    score = 3 * len(OUTCOME_RE.findall(sentence))
+    score += 2 * len(NUMBER_RE.findall(sentence))
+    if idx == 0:
+        score += 2
+    if idx == total - 1:
+        score += 1
+    if sentence.endswith("?"):
+        score -= 4
+    if FUTURE_RE.match(sentence):
+        score -= 4
+    return score
+
+
+def _compress(sentence, budget, have_output):
+    """Keep a sentence's outcome-bearing clauses within a word budget."""
+    s = re.sub(r"\([^)]*\)", " ", sentence)              # drop parentheticals
+    s = re.sub(r"\s+", " ", s).strip().rstrip(".!?,;:")
+    if not s:
+        return "", 0
+    clauses = re.split(r"\s+[—–-]{1,2}\s+|;\s+|:\s+|,\s+and\s+", s)
+    kept, used = [], 0
+    for j, clause in enumerate(clauses):
+        clause = clause.strip().strip(",")
+        if not clause:
+            continue
+        n = len(clause.split())
+        relevant = j == 0 or OUTCOME_RE.search(clause) or NUMBER_RE.search(clause)
+        if not relevant:
+            continue
+        if used + n > budget:
+            if j == 0 and not kept and not have_output:
+                # Nothing fits at all: hard-trim as a last resort.
+                return " ".join(clause.split()[:budget]) + "…", budget
+            break
+        kept.append(clause)
+        used += n
+    return ", ".join(kept), used
+
+
 def summarize(text):
-    """One line, at most MAX_SUMMARY_WORDS words, secrets redacted."""
+    """Synthesize one line (max MAX_SUMMARY_WORDS words) from a whole message.
+
+    Not a prefix truncation: sentences are scored by outcome keywords and
+    numbers, the best are kept in original order, and each is compressed to
+    its outcome-bearing clauses — so "61 tests passing, 2 files changed"
+    survives even when it sits deep in a long final message.
+    """
     if not text:
         return ""
-    text = re.sub(r"```.*?```", " ", text, flags=re.S)   # drop fenced code blocks
-    text = re.sub(r"^#+\s*", "", text, flags=re.M)       # markdown headers
-    text = re.sub(r"[*>|]", " ", text)                   # markdown decoration
-    text = redact(text)
-    words = text.split()
-    if not words:
+    text = redact(clean_text(text))
+    parts = re.split(r"(?<=[.!?])\s+|\n+", text)
+    sentences = [p.strip() for p in parts if p.strip()]
+    if not sentences:
         return ""
-    out = " ".join(words[:MAX_SUMMARY_WORDS])
-    if len(words) > MAX_SUMMARY_WORDS:
-        out += "…"
-    return out
+    scored = [(_score(s, i, len(sentences)), i, s) for i, s in enumerate(sentences)]
+    ranked = sorted(scored, key=lambda t: (-t[0], t[1]))
+    chosen = [t for t in ranked[:3] if t[0] > 0] or ranked[:1]
+    chosen.sort(key=lambda t: t[1])                       # back to message order
+
+    budget = MAX_SUMMARY_WORDS
+    pieces = []
+    for _, _, sentence in chosen:
+        phrase, used = _compress(sentence, budget, bool(pieces))
+        if phrase:
+            pieces.append(phrase)
+            budget -= used
+        if budget < 3:
+            break
+    return ". ".join(pieces)
 
 
 def last_assistant_text(transcript_path):

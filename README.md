@@ -5,7 +5,11 @@ when Claude **finished** (and what it did) or **needs your input**.
 
 - **Stop hook**: reads the hook payload, pulls the final assistant message
   from the transcript, and announces a one-line summary (max 12 words):
-  *"All done: 61 tests passing, 2 files changed"*, not *"Task complete"*.
+  *"All done, 61 tests passing, 2 files changed"*, not *"Task complete"*.
+  The summary is a synthesis, not a prefix: sentences are scored by outcome
+  words and numbers, and the winning outcome-bearing clauses are kept —
+  even when the stats sit deep in a long final message. Markdown
+  (backticks, bold, bullets) is stripped so `say` never reads it aloud.
 - **Notification hook**: relays what Claude is waiting on
   (*"Claude needs your permission to use Bash"*).
 - Three toggleable channels: macOS desktop notification, spoken line

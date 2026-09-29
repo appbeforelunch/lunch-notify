@@ -86,7 +86,7 @@ check "needs input: spoken prefix"          "$OUT" 'SAY\|lunch-notify needs your
 START=$(date +%s)
 OUT="$(run_hook stop "$WORK/stop-huge.json")"
 ELAPSED=$(( $(date +%s) - START ))
-check "huge transcript: final msg found"    "$OUT" 'Refactor complete: migrated 14 modules'
+check "huge transcript: final msg found"    "$OUT" 'Refactor complete.*migrated 14 modules'
 if [ "$ELAPSED" -le 10 ]; then
   echo "PASS: huge transcript: fast (${ELAPSED}s)"; PASS=$((PASS + 1))
 else
@@ -98,10 +98,12 @@ python3 -c 'import sys; sys.stdout.write("{\"cwd\": \"/tmp/junk\", \"pad\": \"" 
 OUT="$(run_hook stop "$WORK/huge-payload.json")"
 check "huge payload: safe fallback"         "$OUT" 'DESKTOP\|.*\|Task finished\|Glass'
 
-# 5. Quotes, backticks, dollar signs survive intact (argv, not shell).
+# 5. Quotes and dollar signs survive as inert text (argv, not shell);
+#    backticks are markdown and get stripped so `say` doesn't read them.
 OUT="$(run_hook stop "$WORK/stop-quotes.json")"
 check "quotes: double quotes kept"          "$OUT" '"old name"'
-check "quotes: backticks kept"              "$OUT" '`new_name`'
+check "quotes: backtick content kept"       "$OUT" 'new_name'
+check_absent "quotes: backtick char gone"   "$OUT" '`'
 check "quotes: dollar sign kept literally"  "$OUT" '\$PATH'
 
 # 6. Secrets are redacted from every channel.
@@ -124,7 +126,25 @@ check "cwd alpha named"                     "$OUT_A" '✅ proj-alpha — finishe
 check "cwd beta named"                      "$OUT_B" '✅ proj-beta — finished'
 check_absent "alpha not beta"               "$OUT_A" 'proj-beta'
 
-# 9. Summary is capped at 12 words.
+# 9. Synthesis, not truncation: a long real-world final message keeps its
+#    outcome stats even though they sit past the first 12 words.
+OUT="$(run_hook stop "$WORK/stop-verbose.json")"
+check "verbose: stats beyond word 12 kept"  "$OUT" '25 fixture checks pass'
+BODY="$(grep '^DESKTOP' <<< "$OUT" | cut -d'|' -f3)"
+WORDS=$(echo "$BODY" | wc -w | tr -d ' ')
+if [ "$WORDS" -le 12 ]; then
+  echo "PASS: verbose: still within word cap ($WORDS words)"; PASS=$((PASS + 1))
+else
+  echo "FAIL: verbose: word cap ($WORDS words): $BODY"; FAIL=$((FAIL + 1))
+fi
+check_absent "verbose: no mid-sentence cut" "$OUT" 'DESKTOP\|[^|]*\|[^|]*…\|'
+
+# 10. Short-lead style ("Fixed. 61/61 passing. <detail>"): lead and stats kept.
+OUT="$(run_hook stop "$WORK/stop-short-lead.json")"
+check "short lead: verdict kept"            "$OUT" 'Fixed'
+check "short lead: stats kept"              "$OUT" '61/61 passing'
+
+# 11. Summary is capped at 12 words.
 BODY="$(run_hook stop "$WORK/stop-normal.json" | grep '^DESKTOP' | cut -d'|' -f3)"
 WORDS=$(echo "$BODY" | wc -w | tr -d ' ')
 if [ "$WORDS" -le 12 ]; then
@@ -133,7 +153,7 @@ else
   echo "FAIL: summary word cap ($WORDS words): $BODY"; FAIL=$((FAIL + 1))
 fi
 
-# 10. ntfy off by default: default config emits no NTFY line.
+# 12. ntfy off by default: default config emits no NTFY line.
 OUT="$(NOTIFY_KIT_DRY_RUN=1 NOTIFY_KIT_CONF=/nonexistent python3 "$HOOK" stop < "$WORK/stop-normal.json")"
 check_absent "ntfy off by default"          "$OUT" '^NTFY'
 

@@ -1,0 +1,1 @@
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Fixed. 61/61 passing. The bug: `1 lb 11.5 oz` is one size, not two — the parser treated the ounces as a second entry."}]}}
