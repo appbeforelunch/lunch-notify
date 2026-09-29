@@ -144,7 +144,44 @@ OUT="$(run_hook stop "$WORK/stop-short-lead.json")"
 check "short lead: verdict kept"            "$OUT" 'Fixed'
 check "short lead: stats kept"              "$OUT" '61/61 passing'
 
-# 11. Summary is capped at 12 words.
+# 11. Regression (real case shape): a final message with a markdown table,
+#     indented code, and number-dense rows. The summary must carry the
+#     verdict + stats, never a table row or code line, no markdown pipes
+#     or arrows, and must end on a complete thought (no ellipsis).
+OUT="$(run_hook stop "$WORK/stop-table.json")"
+check "table: verdict kept"                 "$OUT" 'Fixed'
+check "table: stats kept"                   "$OUT" '61/61 passing'
+check_absent "table: no table row picked"   "$OUT" 'Stone Oven|Pepperoni|Thin Crust'
+check_absent "table: no code line picked"   "$OUT" 'absorb\(next\)'
+check_absent "table: no ellipsis"           "$OUT" '…'
+check_absent "table: no arrows"             "$OUT" '→|←'
+BODY="$(grep '^SAY' <<< "$OUT" | cut -d'|' -f2)"
+case "$BODY" in
+  *'|'*) echo "FAIL: table: pipe char in spoken line: $BODY"; FAIL=$((FAIL + 1));;
+  *)     echo "PASS: table: no pipe char in spoken line"; PASS=$((PASS + 1));;
+esac
+WORDS=$(run_hook stop "$WORK/stop-table.json" | grep '^DESKTOP' | cut -d'|' -f3 | wc -w | tr -d ' ')
+if [ "$WORDS" -le 12 ]; then
+  echo "PASS: table: within word cap ($WORDS words)"; PASS=$((PASS + 1))
+else
+  echo "FAIL: table: word cap ($WORDS words)"; FAIL=$((FAIL + 1))
+fi
+
+# 12. No output ever ends truncated: every stop fixture's body ends cleanly.
+TRUNC_FAIL=0
+for f in "$WORK"/stop-*.json; do
+  B="$(run_hook stop "$f" | grep '^DESKTOP' | cut -d'|' -f3)"
+  case "$B" in
+    *…|*,) echo "FAIL: truncated/dangling body from $(basename "$f"): $B"; TRUNC_FAIL=1;;
+  esac
+done
+if [ "$TRUNC_FAIL" -eq 0 ]; then
+  echo "PASS: no fixture body ends truncated"; PASS=$((PASS + 1))
+else
+  FAIL=$((FAIL + 1))
+fi
+
+# 13. Summary is capped at 12 words.
 BODY="$(run_hook stop "$WORK/stop-normal.json" | grep '^DESKTOP' | cut -d'|' -f3)"
 WORDS=$(echo "$BODY" | wc -w | tr -d ' ')
 if [ "$WORDS" -le 12 ]; then
@@ -153,7 +190,7 @@ else
   echo "FAIL: summary word cap ($WORDS words): $BODY"; FAIL=$((FAIL + 1))
 fi
 
-# 12. ntfy off by default: default config emits no NTFY line.
+# 14. ntfy off by default: default config emits no NTFY line.
 OUT="$(NOTIFY_KIT_DRY_RUN=1 NOTIFY_KIT_CONF=/nonexistent python3 "$HOOK" stop < "$WORK/stop-normal.json")"
 check_absent "ntfy off by default"          "$OUT" '^NTFY'
 

@@ -91,17 +91,22 @@ def redact(text):
 def clean_text(text):
     """Strip markdown so nothing decorative reaches a banner or gets spoken."""
     text = re.sub(r"```.*?```", " ", text, flags=re.S)   # fenced code blocks
+    text = re.sub(r"^[ \t]*\|.*$", " ", text, flags=re.M)  # markdown table rows
+    text = re.sub(r"^(?: {4}|\t).*$", " ", text, flags=re.M)  # indented code lines
     text = re.sub(r"^#+\s*", "", text, flags=re.M)       # headers
     text = text.replace("`", "")                          # inline code markers
     text = re.sub(r"\*\*?", "", text)                     # bold/italic markers
     text = re.sub(r"^\s*[-*•]\s+", "", text, flags=re.M)  # bullet markers
     text = re.sub(r"^\s*>\s?", "", text, flags=re.M)      # blockquotes
+    text = re.sub(r"[|→←↔⇐⇒]", " ", text)                # stray structure/arrows
     return text
 
 
 def _score(sentence, idx, total):
-    score = 3 * len(OUTCOME_RE.findall(sentence))
-    score += 2 * len(NUMBER_RE.findall(sentence))
+    # Cap each signal so number- or keyword-dense prose can't drown out
+    # a short verdict sentence like "Fixed."
+    score = min(3 * len(OUTCOME_RE.findall(sentence)), 6)
+    score += min(2 * len(NUMBER_RE.findall(sentence)), 4)
     if idx == 0:
         score += 2
     if idx == total - 1:
@@ -113,8 +118,13 @@ def _score(sentence, idx, total):
     return score
 
 
-def _compress(sentence, budget, have_output):
-    """Keep a sentence's outcome-bearing clauses within a word budget."""
+def _compress(sentence, budget):
+    """Keep a sentence's outcome-bearing clauses within a word budget.
+
+    Never cuts mid-thought: a clause that doesn't fit whole is packed by
+    leading comma-chunks, and if nothing fits, nothing is emitted (the
+    caller falls back to a complete generic line).
+    """
     s = re.sub(r"\([^)]*\)", " ", sentence)              # drop parentheticals
     s = re.sub(r"\s+", " ", s).strip().rstrip(".!?,;:")
     if not s:
@@ -125,17 +135,23 @@ def _compress(sentence, budget, have_output):
         clause = clause.strip().strip(",")
         if not clause:
             continue
-        n = len(clause.split())
         relevant = j == 0 or OUTCOME_RE.search(clause) or NUMBER_RE.search(clause)
         if not relevant:
             continue
-        if used + n > budget:
-            if j == 0 and not kept and not have_output:
-                # Nothing fits at all: hard-trim as a last resort.
-                return " ".join(clause.split()[:budget]) + "…", budget
-            break
-        kept.append(clause)
-        used += n
+        n = len(clause.split())
+        if used + n <= budget:
+            kept.append(clause)
+            used += n
+            continue
+        # Too long as a whole: keep its leading comma-chunks that fit, stop.
+        for chunk in re.split(r",\s+", clause):
+            chunk = chunk.strip()
+            cn = len(chunk.split())
+            if not chunk or used + cn > budget:
+                break
+            kept.append(chunk)
+            used += cn
+        break
     return ", ".join(kept), used
 
 
@@ -154,15 +170,32 @@ def summarize(text):
     sentences = [p.strip() for p in parts if p.strip()]
     if not sentences:
         return ""
+
+    budget = MAX_SUMMARY_WORDS
+    pieces = []
+    # Short leading verdict sentences ("Fixed." "61/61 passing.") are the
+    # heart of the summary: seed with them before any ranking.
+    while sentences:
+        lead = sentences[0]
+        words = lead.split()
+        if len(pieces) < 2 and len(words) <= 5 and (
+            OUTCOME_RE.search(lead) or NUMBER_RE.search(lead)
+        ):
+            pieces.append(lead.rstrip(".!?,;:"))
+            budget -= len(words)
+            sentences.pop(0)
+        else:
+            break
+    if not sentences:
+        return ". ".join(pieces)
+
     scored = [(_score(s, i, len(sentences)), i, s) for i, s in enumerate(sentences)]
     ranked = sorted(scored, key=lambda t: (-t[0], t[1]))
     chosen = [t for t in ranked[:3] if t[0] > 0] or ranked[:1]
     chosen.sort(key=lambda t: t[1])                       # back to message order
 
-    budget = MAX_SUMMARY_WORDS
-    pieces = []
     for _, _, sentence in chosen:
-        phrase, used = _compress(sentence, budget, bool(pieces))
+        phrase, used = _compress(sentence, budget)
         if phrase:
             pieces.append(phrase)
             budget -= used
