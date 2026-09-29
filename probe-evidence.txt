@@ -1,0 +1,14 @@
+Reality probe 2026-09-28: real transcripts through the Stop hook (NOTIFY_KIT_DRY_RUN=1).
+All fixtures pass (25/25, verified independently). Against REAL session logs:
+
+lunch-unitprice/session-2.jsonl:
+  DESKTOP|lunch-unitprice - finished|Fixed. 61/61 passing. The bug `1 lb 11.5 oz` is one size,...|Glass
+  SAY|lunch-unitprice finished. Fixed. 61/61 passing. The bug `1 lb 11.5 oz` is one size,...
+
+lunch-notify/session-1.jsonl (the kit summarizing its own build):
+  DESKTOP|lunch-notify - finished|The kit is built and fully tested - all 25 fixture checks...|Glass
+
+Observations (pre-fix, untouched):
+1. The "summary" is the final message's first 12 words, truncated mid-sentence, not a synthesis.
+2. Markdown survives into the SPOKEN line: backticks and em dashes get read to you out loud.
+3. Project attribution from cwd works; redaction fixtures pass.

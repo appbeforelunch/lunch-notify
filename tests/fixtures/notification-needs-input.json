@@ -1,0 +1,6 @@
+{
+  "session_id": "abc123",
+  "hook_event_name": "Notification",
+  "cwd": "/Users/demo/Documents/Personal-Projects/lunch-notify",
+  "message": "Claude needs your permission to use Bash"
+}

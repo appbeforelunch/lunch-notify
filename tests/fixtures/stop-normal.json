@@ -1,0 +1,7 @@
+{
+  "session_id": "abc123",
+  "hook_event_name": "Stop",
+  "stop_hook_active": false,
+  "cwd": "/Users/demo/Documents/Personal-Projects/lunch-notify",
+  "transcript_path": "__FIXTURES__/transcript-normal.jsonl"
+}
