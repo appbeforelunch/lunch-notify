@@ -3,8 +3,9 @@
 Stop babysitting the terminal. Two hooks tell you — from the next room —
 when Claude **finished** (and what it did) or **needs your input**.
 
-- **Stop hook**: reads the hook payload, pulls the final assistant message
-  from the transcript, and announces a one-line summary (max 12 words):
+- **Stop hook**: reads the hook payload, takes Claude's final reply from its
+  `last_assistant_message` field (falling back to the transcript only if that
+  field is missing or empty), and announces a one-line summary (max 12 words):
   *"All done, 61 tests passing, 2 files changed"*, not *"Task complete"*.
   The summary is a synthesis, not a prefix: sentences are scored by outcome
   words and numbers, and the winning outcome-bearing clauses are kept —
