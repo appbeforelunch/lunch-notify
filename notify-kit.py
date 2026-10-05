@@ -337,7 +337,11 @@ def main():
     project = os.path.basename(os.path.normpath(str(cwd))) or "claude"
 
     if kind == "stop":
-        text = last_assistant_text(payload.get("transcript_path") or "")
+        # Per the hooks reference, last_assistant_message is the authoritative
+        # final reply at Stop time; the transcript file may not include it yet.
+        text = payload.get("last_assistant_message")
+        if not (isinstance(text, str) and text.strip()):
+            text = last_assistant_text(payload.get("transcript_path") or "")
         summary = summarize(text) or "Task finished"
     else:
         summary = summarize(str(payload.get("message") or "")) or "Claude is waiting for you"

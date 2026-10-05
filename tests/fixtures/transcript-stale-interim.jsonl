@@ -1,0 +1,2 @@
+{"type":"user","message":{"role":"user","content":"migrate the database"}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Now I'll rebuild the app:"}]}}

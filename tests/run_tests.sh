@@ -190,7 +190,26 @@ else
   echo "FAIL: summary word cap ($WORDS words): $BODY"; FAIL=$((FAIL + 1))
 fi
 
-# 14. ntfy off by default: default config emits no NTFY line.
+# 14. Payload last_assistant_message wins over a stale transcript whose
+#     last assistant message is an older, different reply.
+OUT="$(run_hook stop "$WORK/stop-stale-prev.json")"
+check "stale prev: payload message used"    "$OUT" '12 services updated'
+check_absent "stale prev: old reply absent" "$OUT" 'unused imports|[Ll]int'
+
+# 15. Same, but the stale transcript ends on a mid-task interim line.
+OUT="$(run_hook stop "$WORK/stop-stale-interim.json")"
+check "stale interim: payload message used" "$OUT" '8 tables moved'
+check_absent "stale interim: no mid-task line" "$OUT" 'rebuild'
+
+# 16. last_assistant_message missing: fall back to the transcript.
+OUT="$(run_hook stop "$WORK/stop-lam-missing.json")"
+check "lam missing: transcript fallback"    "$OUT" '61 tests passing'
+
+# 17. last_assistant_message present but empty: same fallback.
+OUT="$(run_hook stop "$WORK/stop-lam-empty.json")"
+check "lam empty: transcript fallback"      "$OUT" '61 tests passing'
+
+# 18. ntfy off by default: default config emits no NTFY line.
 OUT="$(NOTIFY_KIT_DRY_RUN=1 NOTIFY_KIT_CONF=/nonexistent python3 "$HOOK" stop < "$WORK/stop-normal.json")"
 check_absent "ntfy off by default"          "$OUT" '^NTFY'
 

@@ -1,0 +1,8 @@
+{
+  "session_id": "stale1",
+  "hook_event_name": "Stop",
+  "stop_hook_active": false,
+  "cwd": "/Users/demo/Documents/Personal-Projects/lunch-notify",
+  "transcript_path": "__FIXTURES__/transcript-stale-prev.jsonl",
+  "last_assistant_message": "Deploy complete: 12 services updated, 0 errors."
+}

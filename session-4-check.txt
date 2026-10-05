@@ -1,0 +1,17 @@
+Session 4 independent check (2026-10-05, run by the verifier after session 4 ended, not by the session)
+
+Tests, re-run by the verifier: ./tests/run_tests.sh -> 46 passed, 0 failed.
+
+Stale-transcript reproduction (the live-test failure): a real transcript cut off just before its final
+assistant message, with last_assistant_message carrying the real final reply. Dry run, DESKTOP lines.
+Old = notify-kit.py at the session-3 fix (git b5441b9), New = after session 4.
+
+pizza (lunch-unitprice/session-2)
+  OLD: ✅ pizza — finished | Confirmed visually. Updating the README
+  NEW: ✅ pizza — finished | Fixed. 61/61 passing. After-screenshot captured to evidence/bug-pizza-v2-fixed.png alongside your pre-fix one
+lunch-notify/session-3
+  OLD: ✅ notify-s3 — finished | All 40 pass. Now replay the actual regressing transcript
+  NEW: ✅ notify-s3 — finished | Regression fixed and locked in with tests. All 40 tests pass
+
+Complete transcripts (session 4's own replay): identical summaries on both paths, as expected; only a
+not-yet-flushed transcript shows the difference.

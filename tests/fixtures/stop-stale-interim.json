@@ -1,0 +1,8 @@
+{
+  "session_id": "stale2",
+  "hook_event_name": "Stop",
+  "stop_hook_active": false,
+  "cwd": "/Users/demo/Documents/Personal-Projects/lunch-notify",
+  "transcript_path": "__FIXTURES__/transcript-stale-interim.jsonl",
+  "last_assistant_message": "Migration finished: 8 tables moved, 0 rows lost."
+}
