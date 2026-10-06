@@ -4,7 +4,7 @@ Tests, re-run by the verifier: ./tests/run_tests.sh -> 46 passed, 0 failed.
 
 Stale-transcript reproduction (the live-test failure): a real transcript cut off just before its final
 assistant message, with last_assistant_message carrying the real final reply. Dry run, DESKTOP lines.
-Old = notify-kit.py at the session-3 fix (git b5441b9), New = after session 4.
+Old = notify-kit.py at the session-3 fix (git 7c7355b), New = after session 4.
 
 pizza (lunch-unitprice/session-2)
   OLD: ✅ pizza — finished | Confirmed visually. Updating the README

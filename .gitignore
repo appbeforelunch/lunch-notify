@@ -1,0 +1,13 @@
+# Raw Claude Code session logs and run markers (contain local paths)
+session-*.jsonl
+session-*.start
+session-*.end
+session-*.err
+
+# Working drafts
+PROMPT-session4-DRAFT.md
+SCRUB-REPORT.md
+
+__pycache__/
+*.pyc
+.DS_Store

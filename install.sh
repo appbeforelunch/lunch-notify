@@ -80,7 +80,7 @@ PY
 
 if [[ ! -f "$HOME/.claude/notify-kit.conf" ]]; then
   cat > "$HOME/.claude/notify-kit.conf" <<'CONF'
-# Claude Code notification kit — 1 to enable a channel, 0 to disable.
+# Claude Code notification kit: 1 to enable a channel, 0 to disable.
 DESKTOP=1
 SPEAK=1
 # Phone push via ntfy.sh (no account needed). Set NTFY=1 and pick a

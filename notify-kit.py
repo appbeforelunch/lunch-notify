@@ -160,7 +160,7 @@ def summarize(text):
 
     Not a prefix truncation: sentences are scored by outcome keywords and
     numbers, the best are kept in original order, and each is compressed to
-    its outcome-bearing clauses — so "61 tests passing, 2 files changed"
+    its outcome-bearing clauses, so "61 tests passing, 2 files changed"
     survives even when it sits deep in a long final message.
     """
     if not text:

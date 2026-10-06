@@ -1,6 +1,6 @@
 # Claude Code Notification Kit
 
-Stop babysitting the terminal. Two hooks tell you — from the next room —
+Stop babysitting the terminal. Two hooks tell you, from the next room,
 when Claude **finished** (and what it did) or **needs your input**.
 
 - **Stop hook**: reads the hook payload, takes Claude's final reply from its
@@ -8,7 +8,7 @@ when Claude **finished** (and what it did) or **needs your input**.
   field is missing or empty), and announces a one-line summary (max 12 words):
   *"All done, 61 tests passing, 2 files changed"*, not *"Task complete"*.
   The summary is a synthesis, not a prefix: sentences are scored by outcome
-  words and numbers, and the winning outcome-bearing clauses are kept —
+  words and numbers, and the winning outcome-bearing clauses are kept,
   even when the stats sit deep in a long final message. Markdown
   (backticks, bold, bullets) is stripped so `say` never reads it aloud.
 - **Notification hook**: relays what Claude is waiting on
@@ -74,13 +74,37 @@ Edit `~/.claude/notify-kit.conf`:
 DESKTOP=1        # macOS notification banner
 SPEAK=1          # spoken line via `say`
 NTFY=0           # phone push, off by default
-NTFY_TOPIC=      # e.g. joses-claude-x7k2q9 — treat the topic like a password
+NTFY_TOPIC=      # e.g. demo-notify-x7k2q9. Treat the topic like a password
 NTFY_SERVER=https://ntfy.sh
 ```
 
 For phone push: install the ntfy app, subscribe to your topic, set
 `NTFY=1` and `NTFY_TOPIC=<your topic>`. Anyone who knows the topic name
 can read it, so make it unguessable (summaries are redacted regardless).
+
+## If you see no banner
+
+The hooks ran but nothing appeared on screen? The spoken line still works
+in all of these cases; only the banner is held back.
+
+- **Focus modes.** Sleep, Work, Do Not Disturb and any custom Focus hold
+  banners until the Focus ends. Check the Focus icon in the menu bar.
+- **Script Editor must be allowed.** The banner is posted by `osascript`,
+  so macOS files it under *Script Editor*. Open System Settings >
+  Notifications > Script Editor, turn notifications on, and pick
+  **Banners** or **Alerts** (not *None*).
+- **Screen recording and sharing hide banners.** While the display is
+  mirrored, shared, or captured (including `screencapture`), macOS
+  suppresses banners by default. In System Settings > Notifications, set
+  "Allow notifications when mirroring or sharing the display" to Allow
+  if you want them during a recording.
+
+Quick check without a real session:
+
+```sh
+echo '{"cwd":"/Users/demo/proj","last_assistant_message":"Done, 3 tests passing."}' \
+  | python3 ~/.claude/hooks/notify-kit.py stop
+```
 
 ## Test
 
@@ -100,6 +124,6 @@ and nothing touches the network.
 ./install.sh --uninstall
 ```
 
-Removes the kit's entries from `~/.claude/settings.json` (only its own —
+Removes the kit's entries from `~/.claude/settings.json` (only its own;
 other hooks are untouched) and deletes `~/.claude/hooks/notify-kit.py`.
 Delete `~/.claude/notify-kit.conf` too if you want a clean slate.
